@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warrior Habit Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-dark: #1e293b;
+      --text-light: #e2e8f0;
+      --accent: #38bdf8;
+      --hover-bg: #334155;
+      --gold: #facc15;
+      --gray: #94a3b8;
+
+      --bg-light: #f1f5f9;
+      --card-light: #ffffff;
+      --text-dark: #0f172a;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+      background: var(--bg-dark) url('tree.jpg') no-repeat;
+      color: var(--text-light);
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+    body.light-mode {
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    header {
+      background: var(--card-dark);
+      padding: 1rem;
+      text-align: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--accent);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    body.light-mode header {
+      background: var(--card-light);
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: var(--accent);
+      color: var(--bg-dark);
+      border: none;
+      border-radius: 20px;
+      padding: 0.4rem 0.8rem;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+    .theme-toggle:hover {
+      transform: scale(1.1);
+    }
+
+    .quote {
+      text-align: center;
+      font-style: italic;
+      margin: 1rem auto;
+      color: var(--gray);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 1.5rem;
+    }
+
+    h2, h3 {
+      color: var(--gold);
+      text-align: center;
+    }
+
+    .task {
+      background: var(--card-dark);
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      transition: background 0.3s ease, transform 0.3s ease;
+    }
+    body.light-mode .task {
+      background: var(--card-light);
+    }
+    .task:hover {
+      background: var(--hover-bg);
+      transform: scale(1.02);
+    }
+
+    .summary {
+      background: var(--card-dark);
+      padding: 1.5rem;
+      margin-top: 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    body.light-mode .summary {
+      background: var(--card-light);
+    }
+
+    .rating span {
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+    .rating span.active {
+      color: var(--gold);
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      background: var(--hover-bg);
+      color: var(--text-light);
+      border: none;
+      resize: vertical;
+    }
+    body.light-mode textarea {
+      background: #e2e8f0;
+      color: var(--text-dark);
+    }
+
+    .progress-table {
+      width: 100%;
+      margin-top: 2rem;
+      border-collapse: collapse;
+    }
+    .progress-table th, .progress-table td {
+      border: 1px solid var(--hover-bg);
+      padding: 0.5rem;
+      text-align: center;
+    }
+    .progress-table th {
+      background: var(--card-dark);
+      color: var(--gold);
+    }
+    .progress-table td {
+      background: var(--bg-dark);
+    }
+
+    button {
+      margin-top: 1rem;
+      padding: 0.6rem 1.2rem;
+      background: var(--accent);
+      color: var(--bg-dark);
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0ea5e9;
+    }
+
+    canvas {
+      margin-top: 2rem;
+      width: 100% !important;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+
+  <button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
+  <header>Welcome Khushal! Let’s Build Discipline Together.</header>
+  <div class="quote" id="quote"></div>
+  <div class="container">
+    <h2>🗓️ Today's Power-Packed Routine</h2>
+    <div id="taskList"></div>
+
+    <div class="summary">
+      <h3>🌟 Daily Reflection & Progress</h3>
+      <label><input type="checkbox" id="brahmacharya" /> Brahmacharya Maintained</label>
+      <div class="rating" id="starRating"></div>
+      <textarea id="notes" placeholder="Write your daily reflections..."></textarea>
+      <button onclick="saveDayData()">💾 Save My Progress</button>
+    </div>
+
+    <canvas id="streakChart"></canvas>
+
+    <h2>📅 Weekly Warrior Summary</h2>
+    <table class="progress-table" id="summaryTable">
+      <thead>
+        <tr><th>Date</th><th>Brahmacharya</th><th>Stars</th><th>Notes</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const tasks = [
+      "✅ Wake up at 5:15 AM",
+      "🏋️‍♂️ Gym 6:30 - 6:45 AM",
+      "🥣 Post-gym diet",
+      "🕉️ Ready and Worship",
+      "🍽️ Breakfast",
+      "📚 Class (9:00 - 2:30)",
+      "🧠 Study / Typing / Excel Skills",
+      "📖 Class Records + Revision",
+      "🪔 Evening Pooja",
+      "🍲 Dinner",
+      "📔 Journal + Sleep by 9:30 PM"
+    ];
+
+    const quotes = [
+      "Discipline is the bridge between goals and accomplishment.",
+      "Small steps every day lead to big changes.",
+      "You are your only limit.",
+      "The warrior who controls his time, controls his destiny.",
+      "Your habits decide your future, not your hopes."
+    ];
+
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("quote").innerText = quotes[Math.floor(Math.random() * quotes.length)];
+
+    const taskListEl = document.getElementById("taskList");
+    tasks.forEach((task, i) => {
+      const div = document.createElement("div");
+      div.className = "task";
+      div.innerHTML = `<label><input type="checkbox" id="task${i}" /> ${task}</label>`;
+      taskListEl.appendChild(div);
+    });
+
+    const starEl = document.getElementById("starRating");
+    for (let i = 1; i <= 5; i++) {
+      const span = document.createElement("span");
+      span.innerText = "★";
+      span.dataset.value = i;
+      span.onclick = () => {
+        document.querySelectorAll(".rating span").forEach(s => s.classList.remove("active"));
+        for (let j = 1; j <= i; j++) {
+          document.querySelector(`.rating span:nth-child(${j})`).classList.add("active");
+        }
+      };
+      starEl.appendChild(span);
+    }
+
+    function saveDayData() {
+      const completedTasks = tasks.map((_, i) => document.getElementById(`task${i}`).checked);
+      const brahmacharya = document.getElementById("brahmacharya").checked;
+      const notes = document.getElementById("notes").value;
+      const stars = document.querySelectorAll(".rating span.active").length;
+      const data = { completedTasks, brahmacharya, notes, stars };
+      localStorage.setItem(today, JSON.stringify(data));
+      loadSummary();
+      loadChart();
+      alert("✅ Day saved! You're growing stronger!");
+    }
+
+    function loadSummary() {
+      const tbody = document.getElementById("summaryTable").querySelector("tbody");
+      tbody.innerHTML = "";
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(Date.now() - i * 86400000).toISOString().split("T")[0];
+        const data = JSON.parse(localStorage.getItem(date));
+        if (data) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${date}</td><td>${data.brahmacharya ? "✅" : "❌"}</td><td>${"★".repeat(data.stars)}</td><td>${data.notes}</td>`;
+          tbody.appendChild(tr);
+        }
+      }
+    }
+
+    function loadChart() {
+      const ctx = document.getElementById('streakChart').getContext('2d');
+      const labels = [];
+      const dataPoints = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(Date.now() - i * 86400000).toISOString().split("T")[0];
+        labels.push(date);
+        const data = JSON.parse(localStorage.getItem(date));
+        dataPoints.push(data ? data.stars : 0);
+      }
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '⭐ Star Progress',
+            data: dataPoints,
+            borderColor: '#facc15',
+            backgroundColor: '#facc1540',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle("light-mode");
+    }
+
+    window.onload = function () {
+      const data = JSON.parse(localStorage.getItem(today));
+      if (data) {
+        tasks.forEach((_, i) => document.getElementById(`task${i}`).checked = data.completedTasks[i]);
+        document.getElementById("brahmacharya").checked = data.brahmacharya;
+        document.getElementById("notes").value = data.notes;
+        for (let j = 0; j < data.stars; j++) {
+          document.querySelector(`.rating span:nth-child(${j+1})`).classList.add("active");
+        }
+      }
+      loadSummary();
+      loadChart();
+    };
+  </script>
+</body>
+</html>
